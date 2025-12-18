@@ -13,7 +13,7 @@ _ITERATIONS = 130_000
 
 def hash_password(password: str) -> str:
     if not password or len(password) < 8:
-        raise errors.ValidationError(message="password must be at least 8 chars")
+        raise errors.ValidationError(detail="password must be at least 8 chars")
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _ITERATIONS)
     salt_b64 = base64.b64encode(salt).decode()

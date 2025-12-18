@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from fastapi import Depends, FastAPI, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette import status
 
@@ -14,27 +18,46 @@ from src.app.dependencies import (
 from src.domain import models
 from src.services.auth import AuthService
 from src.services.wishes import WishService
-from src.shared import errors
+from src.shared import context, errors
 
 app = FastAPI(title="Wishlist API", version="0.1.0")
 
 
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    context.set_request_id(request_id)
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
 @app.exception_handler(errors.DomainError)
 async def handle_domain_error(request: Request, exc: errors.DomainError):
-    return JSONResponse(status_code=exc.status, content={"error": exc.to_dict()})
+    return exc.to_problem()
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_request_validation_error(
+    request: Request, exc: RequestValidationError
+):
+    return errors.problem_response(
+        status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        title="Validation Error",
+        detail="payload failed validation",
+        type_="https://wishlist.example/errors/validation_error",
+        extras={"code": "validation_error", "errors": jsonable_encoder(exc.errors())},
+    )
 
 
 @app.exception_handler(Exception)
 async def handle_unexpected_error(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": {
-                "code": "internal_error",
-                "message": "unexpected error",
-                "details": {},
-            }
-        },
+    return errors.problem_response(
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        title="Internal Server Error",
+        detail="unexpected error",
+        type_="https://wishlist.example/errors/internal_error",
     )
 
 

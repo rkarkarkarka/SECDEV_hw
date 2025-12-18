@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from src.domain import models
@@ -12,7 +13,7 @@ class InMemoryDB:
         self._wish_id = 0
         self.users: Dict[int, models.User] = {}
         self.wishes: Dict[int, models.Wish] = {}
-        self.tokens: Dict[str, int] = {}
+        self.tokens: Dict[str, Dict[str, object]] = {}
 
     def reset(self) -> None:
         self._user_id = 0
@@ -27,25 +28,29 @@ class InMemoryDB:
     ) -> models.User:
         self._user_id += 1
         user = models.User(
-            id=self._user_id, email=email, password_hash=password_hash, role=role
+            id=self._user_id,
+            email=email.lower(),
+            password_hash=password_hash,
+            role=role,
         )
         self.users[user.id] = user
         return user
 
     def get_user_by_email(self, email: str) -> Optional[models.User]:
-        return next((u for u in self.users.values() if u.email == email), None)
+        canonical = email.lower()
+        return next((u for u in self.users.values() if u.email == canonical), None)
 
     def get_user(self, user_id: int) -> Optional[models.User]:
         return self.users.get(user_id)
 
     # Token operations
-    def store_token(self, token: str, user_id: int) -> None:
-        self.tokens[token] = user_id
+    def store_token(self, token: str, user_id: int, issued_at: datetime) -> None:
+        self.tokens[token] = {"user_id": user_id, "issued_at": issued_at}
 
     def revoke_token(self, token: str) -> None:
         self.tokens.pop(token, None)
 
-    def get_user_id_by_token(self, token: str) -> Optional[int]:
+    def get_token(self, token: str) -> Optional[Dict[str, object]]:
         return self.tokens.get(token)
 
     # Wish operations
