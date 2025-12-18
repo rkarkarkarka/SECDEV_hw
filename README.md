@@ -46,19 +46,34 @@ isort .
 pytest -q
 pre-commit run --all-files
 ```
-## Эндпойнты
-- `GET /health` → `{"status": "ok"}`
-- `POST /items?name=...` — демо-сущность
-- `GET /items/{id}`
 
+## Архитектура
+Код разнесен по слоям (см. `src/`):
+- `app/` — FastAPI, схемы запросов/ответов, DI.
+- `services/` — бизнес-логика (аутентификация, управление wishlist).
+- `domain/` — модели/инварианты (`User`, `Wish`).
+- `adapters/` — in-memory «БД» и токены (в P05+ заменим на Postgres).
+- `shared/` — ошибки, хэширование паролей, токены.
+
+## API (MVP Wishlist)
+- `POST /api/v1/auth/signup` — регистрация пользователя (роль `user`).
+- `POST /api/v1/auth/login` — выдаёт bearer-токен и профиль.
+- `POST /api/v1/auth/logout` — отзывает токен.
+- `GET /api/v1/wishes?limit=&offset=` — список желаний владельца.
+- `POST /api/v1/wishes` — создать желание (title/link/price/priority).
+- `GET|PATCH|DELETE /api/v1/wishes/{id}` — чтение/правка/архивирование (owner-only или `admin`).
+
+Формат ошибок единый:
+```json
+{
+  "error": {"code": "validation_error", "message": "...", "details": {}}
+}
+```
+
+### Роли и секреты
+- Значение `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` (по умолчанию `admin@example.com` / `ChangeMe123!`) используются для авто-создания администратора.
+- Авторизация через `Authorization: Bearer <token>`.
+- Owner-only: любой запрос с чужим `wish_id` возвращает `404`, кроме роли `admin`.
 ## CI
 В репозитории настроен CI (GitHub Actions).
 Все проверки должны быть зелёными для успешного merge в main.
-
-## Формат ошибок
-Все ошибки — JSON-обёртка:
-```json
-{
-  "error": {"code": "not_found", "message": "item not found"}
-}
-```
