@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 
 class UserRole(str, Enum):
@@ -32,11 +33,12 @@ class Wish:
     owner_id: int
     title: str
     link: Optional[str] = None
-    price_estimate: Optional[float] = None
+    price_estimate: Optional[Decimal] = None
     notes: Optional[str] = None
     priority: int = 1
     status: WishStatus = WishStatus.ACTIVE
     archived: bool = False
+    attachments: List[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

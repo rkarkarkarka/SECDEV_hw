@@ -1,23 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from decimal import Decimal
 from typing import Optional
 
 from src.adapters.memory import InMemoryDB
 from src.domain import models
-from src.shared import errors
+from src.shared import errors, uploads
 
 
 class WishService:
-    def __init__(self, db: InMemoryDB):
+    def __init__(self, db: InMemoryDB, attachments_dir: str = "uploads"):
         self.db = db
+        self.attachments_dir = attachments_dir
 
     def create_wish(
         self,
         owner_id: int,
         title: str,
         link: Optional[str],
-        price: Optional[float],
+        price: Optional[Decimal],
         notes: Optional[str],
         priority: int,
     ) -> dict:
@@ -103,8 +105,22 @@ class WishService:
         wish.update_timestamp()
         self.db.save_wish(wish)
 
+    def add_attachment(
+        self, owner_id: int, wish_id: int, is_admin: bool, data: bytes
+    ) -> dict:
+        wish = self.db.get_wish(wish_id)
+        if not wish or wish.archived or (wish.owner_id != owner_id and not is_admin):
+            raise errors.NotFoundError(detail="wish not found")
+        saved_path = uploads.secure_save(self.attachments_dir, data)
+        wish.attachments.append(saved_path)
+        wish.update_timestamp()
+        self.db.save_wish(wish)
+        return self._serialize(wish)
+
     def _serialize(self, wish: models.Wish) -> dict:
         data = asdict(wish)
+        if isinstance(wish.price_estimate, Decimal):
+            data["price_estimate"] = str(wish.price_estimate.quantize(Decimal("0.01")))
         data["status"] = wish.status.value
         return data
 
@@ -112,7 +128,7 @@ class WishService:
         self,
         title: str,
         link: Optional[str],
-        price: Optional[float],
+        price: Optional[Decimal],
         notes: Optional[str],
         priority: int,
     ) -> None:

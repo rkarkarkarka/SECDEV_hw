@@ -14,8 +14,10 @@ from src.app import dependencies  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def _reset_state():
+def _reset_state(tmp_path_factory):
+    attachments_dir = tmp_path_factory.mktemp("uploads")
     dependencies.reset_state()
+    dependencies.set_attachment_dir(str(attachments_dir))
     yield
 
 

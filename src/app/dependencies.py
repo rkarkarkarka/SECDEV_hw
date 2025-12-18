@@ -13,7 +13,9 @@ from src.shared import errors
 
 _db = InMemoryDB()
 _auth_service = AuthService(_db)
-_wish_service = WishService(_db)
+ATTACHMENTS_DIR = os.getenv("APP_ATTACHMENTS_DIR", "uploads")
+os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
+_wish_service = WishService(_db, attachments_dir=ATTACHMENTS_DIR)
 
 ADMIN_EMAIL = os.getenv("APP_ADMIN_EMAIL", "admin@example.com")
 ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "ChangeMe123!")
@@ -34,6 +36,11 @@ def get_wish_service() -> WishService:
     return _wish_service
 
 
+def set_attachment_dir(path: str) -> None:
+    global _wish_service
+    _wish_service = WishService(_db, attachments_dir=path)
+
+
 def get_bearer_token(
     authorization: Optional[str] = Header(default=None, alias="Authorization")
 ) -> str:
@@ -51,6 +58,7 @@ def get_current_user(
 
 def reset_state() -> None:
     _db.reset()
+    set_attachment_dir(ATTACHMENTS_DIR)
     _seed_admin()
 
 

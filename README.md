@@ -62,6 +62,7 @@ pre-commit run --all-files
 - `GET /api/v1/wishes?limit=&offset=` — список желаний владельца.
 - `POST /api/v1/wishes` — создать желание (title/link/price/priority).
 - `GET|PATCH|DELETE /api/v1/wishes/{id}` — чтение/правка/архивирование (owner-only или `admin`).
+- `POST /api/v1/wishes/{id}/attachments` — добавить изображение (body: `{"content_base64": "..."}`).
 
 Формат ошибок единый:
 ```json
@@ -84,6 +85,8 @@ pre-commit run --all-files
 - Все ответы об ошибках соблюдают RFC 7807 и возвращают `correlation_id` + `X-Request-ID` (см. ADR-001).
 - `/api/v1/auth/login` защищён rate-limit'ом `APP_LOGIN_RATE_LIMIT` попыток за `APP_LOGIN_RATE_WINDOW` секунд (по умолчанию 5/60), см. ADR-002.
 - Access-токены истекают через `APP_TOKEN_TTL_SECONDS` секунд (дефолт 900, ADR-003). Просроченные токены автоматически отзываются.
+- Денежные значения (`price_estimate`) нормализуются к `Decimal` с двумя знаками, чтобы избежать ошибок округления.
+- Загрузки хранятся в `APP_ATTACHMENTS_DIR` и проходят контроль magic bytes/лимита размера (5МБ); имена файлов — UUID, симлинки запрещены.
 
 ## CI
 В репозитории настроен CI (GitHub Actions).
