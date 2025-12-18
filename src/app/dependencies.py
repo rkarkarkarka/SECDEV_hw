@@ -38,7 +38,7 @@ def get_bearer_token(
     authorization: Optional[str] = Header(default=None, alias="Authorization")
 ) -> str:
     if not authorization or not authorization.lower().startswith("bearer "):
-        raise errors.AuthError(message="missing bearer token")
+        raise errors.AuthError(detail="missing bearer token")
     return authorization.split(" ", 1)[1]
 
 

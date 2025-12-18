@@ -66,7 +66,12 @@ pre-commit run --all-files
 Формат ошибок единый:
 ```json
 {
-  "error": {"code": "validation_error", "message": "...", "details": {}}
+  "type": "https://wishlist.example/errors/validation_error",
+  "title": "Validation error",
+  "status": 422,
+  "detail": "...",
+  "code": "validation_error",
+  "correlation_id": "4f303c75-…"
 }
 ```
 
@@ -74,6 +79,12 @@ pre-commit run --all-files
 - Значение `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` (по умолчанию `admin@example.com` / `ChangeMe123!`) используются для авто-создания администратора.
 - Авторизация через `Authorization: Bearer <token>`.
 - Owner-only: любой запрос с чужим `wish_id` возвращает `404`, кроме роли `admin`.
+
+### Политики безопасности
+- Все ответы об ошибках соблюдают RFC 7807 и возвращают `correlation_id` + `X-Request-ID` (см. ADR-001).
+- `/api/v1/auth/login` защищён rate-limit'ом `APP_LOGIN_RATE_LIMIT` попыток за `APP_LOGIN_RATE_WINDOW` секунд (по умолчанию 5/60), см. ADR-002.
+- Access-токены истекают через `APP_TOKEN_TTL_SECONDS` секунд (дефолт 900, ADR-003). Просроченные токены автоматически отзываются.
+
 ## CI
 В репозитории настроен CI (GitHub Actions).
 Все проверки должны быть зелёными для успешного merge в main.
