@@ -1,3 +1,5 @@
+import base64
+
 from src.app import dependencies
 
 
@@ -89,3 +91,58 @@ def test_admin_can_view_foreign_wish(client):
     )
     assert admin_get.status_code == 200
     assert admin_get.json()["title"] == "Laptop"
+
+
+def test_price_is_normalized_to_two_decimals(client):
+    email = "price@example.com"
+    password = "Password123!"
+    _signup(client, email, password)
+    token = _login(client, email, password)
+
+    resp = client.post(
+        "/api/v1/wishes",
+        json={"title": "Bike", "price_estimate": "123.456"},
+        headers=_auth_header(token),
+    )
+    assert resp.status_code == 201
+    assert resp.json()["price_estimate"] == "123.46"
+
+
+def test_attach_image_and_reject_bad_payload(client):
+    email = "attach@example.com"
+    password = "Password123!"
+    _signup(client, email, password)
+    token = _login(client, email, password)
+
+    resp = client.post(
+        "/api/v1/wishes",
+        json={"title": "Camera"},
+        headers=_auth_header(token),
+    )
+    wish_id = resp.json()["id"]
+
+    png_data = b"\x89PNG\r\n\x1a\n" + b"\x00" * 10
+    payload = {"content_base64": base64.b64encode(png_data).decode()}
+    upload = client.post(
+        f"/api/v1/wishes/{wish_id}/attachments",
+        headers=_auth_header(token),
+        json=payload,
+    )
+    assert upload.status_code == 200
+    body = upload.json()
+    assert len(body["attachments"]) == 1
+
+    bad_payload = {"content_base64": base64.b64encode(b"not an image").decode()}
+    bad_upload = client.post(
+        f"/api/v1/wishes/{wish_id}/attachments",
+        headers=_auth_header(token),
+        json=bad_payload,
+    )
+    assert bad_upload.status_code == 422
+    large_payload = b"\x89PNG\r\n\x1a\n" + b"0" * (5_000_001)
+    too_big = client.post(
+        f"/api/v1/wishes/{wish_id}/attachments",
+        headers=_auth_header(token),
+        json={"content_base64": base64.b64encode(large_payload).decode()},
+    )
+    assert too_big.status_code == 422

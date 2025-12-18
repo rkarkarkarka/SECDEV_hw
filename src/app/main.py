@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Query, Request
@@ -164,3 +166,24 @@ async def delete_wish(
         is_admin=current_user.role == models.UserRole.ADMIN,
     )
     return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+
+
+@app.post("/api/v1/wishes/{wish_id}/attachments", response_model=schemas.WishResponse)
+async def upload_attachment(
+    wish_id: int,
+    payload: schemas.AttachmentUpload,
+    current_user: models.User = Depends(get_current_user),
+    wish_service: WishService = Depends(get_wish_service),
+):
+    try:
+        data = base64.b64decode(payload.content_base64, validate=True)
+    except binascii.Error as exc:
+        raise errors.ValidationError(
+            detail="attachment payload must be base64"
+        ) from exc
+    return wish_service.add_attachment(
+        owner_id=current_user.id,
+        wish_id=wish_id,
+        is_admin=current_user.role == models.UserRole.ADMIN,
+        data=data,
+    )
