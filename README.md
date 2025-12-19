@@ -1,4 +1,5 @@
 # SecDev Course Project
+![CI](https://github.com/a-rusidze/course-project-rkarkarkarka/actions/workflows/ci.yml/badge.svg)
 Учебный проект по курсу «Разработка безопасного ПО» (HSE, 2025).
 
 ## Цели
