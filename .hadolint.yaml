@@ -1,0 +1,3 @@
+ignored:
+  - DL3008  # Pinning apt packages not applicable (no apt install)
+  - DL3059  # False positives for pip install without requirements

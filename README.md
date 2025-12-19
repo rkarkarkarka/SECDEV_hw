@@ -32,11 +32,18 @@ uvicorn app.main:app --reload
 
 ## Контейнеры
 ```bash
-docker build -t secdev-app .
-docker run --rm -p 8000:8000 secdev-app
-# или
-docker compose up --build
+# Собрать и запустить локально
+make docker-build
+docker compose up --build               # использует .env.example
+
+# Остановить
+docker compose down
+
+# Проверить образ (lint + scan) — требует hadolint и trivy
+make lint
+make docker-scan
 ```
+Контейнер запускается под непривилегированным пользователем `app`, healthcheck обращается к `/health`, а каталог вложений монтируется как volume `uploads-data`.
 
 ## Тесты
 Перед каждым PR необходимо выполнить:
@@ -87,6 +94,7 @@ pre-commit run --all-files
 - Access-токены истекают через `APP_TOKEN_TTL_SECONDS` секунд (дефолт 900, ADR-003). Просроченные токены автоматически отзываются.
 - Денежные значения (`price_estimate`) нормализуются к `Decimal` с двумя знаками, чтобы избежать ошибок округления.
 - Загрузки хранятся в `APP_ATTACHMENTS_DIR` и проходят контроль magic bytes/лимита размера (5МБ); имена файлов — UUID, симлинки запрещены.
+- Контейнерное окружение: `Dockerfile` использует multi-stage build, запускает приложение под пользователем `app` и содержит healthcheck; `docker compose up` монтирует volume `uploads-data` и использует env-файл `.env.example`.
 
 ## CI
 В репозитории настроен CI (GitHub Actions).
